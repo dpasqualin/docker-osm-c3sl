@@ -128,7 +128,7 @@ update() {
     local chanset_file="$OSM_DATA/chanset_file.o5c"
 
     _log "Downloading osm update and generating chanset file"
-    osmupdate -v --base-url=$url "$CURRENT_DATA_FILE" "$chanset_file"
+    osmupdate -v --base-url=$url "$CURRENT_OSM_DATA" "$chanset_file"
     _run_osm2pgsql $chanset_file
     rm $chanset_file
 }
