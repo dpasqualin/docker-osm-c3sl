@@ -9,6 +9,14 @@ Build using
 
     # docker build -t dpasqualin/docker-osm-c3sl github.com/dpasqualin/docker-osm-c3sl
 
+## Creating a database
+
+There is a file called run.sh inside misc directory that is not part of the
+docker container. This file can help you create and set up a database with
+osm data in it, as well as helping you to keep this database updated.
+
+It doesn't cover all scenarios, but it can be helpful.
+
 ## Running
 
 This document assumes that OpenStreetMap data has already been imported in an external database.
