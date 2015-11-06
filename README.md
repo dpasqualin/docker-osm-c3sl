@@ -27,6 +27,12 @@ Notice in the top right corner a menu where you can select between available sty
  * [osm-bright](https://github.com/mapbox/osm-bright)
    available at [http://host/osmb/0/0/0.png](http://host/osmb/0/0/0.png)
 
+## Use our instance
+
+There is (or should be) a running instance of this container at
+[http://openstreetmap.c3sl.ufpr.br]. Currently only Brazil is available, but
+feel free to use it on your application.
+
 ## About
 
 This Dockerfile is based on [mguentner/docker-renderd-osm](https://github.com/mguentner/docker-renderd-osm).
