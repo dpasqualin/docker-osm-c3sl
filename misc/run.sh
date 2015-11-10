@@ -55,16 +55,17 @@ _run_osm2pgsql () {
     local import_file=$1
     local create=$2
     local opts=""
+    local mode=""
     local number_processes=$(nproc)
 
     # When running for the first time we want to create the tables,
     # next times we just want to append data
     if test "$create" = "true"; then
         _log "Creating osm database"
-        opts="--create"
+        mode="--create"
     else
         _log "Updating osm database"
-        opts="--append"
+        mode="--append"
     fi
 
     # Limit to 8 to prevent overwhelming pg with connections
@@ -72,11 +73,17 @@ _run_osm2pgsql () {
         number_processes=8
     fi
 
+    opts=""
+    test -n "$DB_HOST" && opts="$opts -H $DB_HOST"
+    test -n "$DB_USER" && opts="$opts -U $DB_USER"
+    test -n "$DB_NAME" && opts="$opts -d $DB_NAME"
+
+    _log "Connection options: $opts"
+
     export PGPASS=$DB_PASS
-    osm2pgsql $opts -C $OSM_IMPORT_CACHE \
+    osm2pgsql $mode -C $OSM_IMPORT_CACHE \
               --number-processes $number_processes --hstore \
-              -d $DB_NAME -H $DB_HOST -U $DB_USER \
-              --slim "$import_file"
+              $opts --slim "$import_file"
 } 
 
 # TODO: Needs testing
@@ -100,32 +107,44 @@ createdb () {
 }
 
 import () {
+    local import_file=$1
     local url="$BASE_URL/${OSM_MAP}-latest.osm.pbf"
     local output="$OSM_DATA/osm_data.pbf"
 
-    _log "Downloading osm data file from $url"
-    if which axel &>/dev/null; then
-        axel -n5 -o "$output" "$url"
-    else
-        wget -O "$output" "$url" 
+    if test -z $import_file; then
+        _log "Downloading osm data file from $url"
+        if which axel &>/dev/null; then
+            axel -n5 -o "$output" "$url"
+        else
+            wget -O "$output" "$url" 
+        fi
     fi
 
-    # This step is supposed to make the process faster, but this assumption
-    # might not be true for all cases.
-    # TODO: check whether this is useful or not.
-    _log "Converting file $output to o5m format"
-    osmconvert --out-o5m "$output" -o="$CURRENT_OSM_DATA"
-    chmod 744 "$CURRENT_OSM_DATA" # make sure www-data can read this file
-
-    # Original .pdf data is no longer necessary
-    rm $output
+    if grep -q '\.pbf$' <<< "$import_file"; then
+        # This step is supposed to make the process faster, but this assumption
+        # might not be true for all cases.
+        # TODO: check whether this is useful or not.
+        _log "Converting file $import_file to o5m format"
+        osmconvert --out-o5m "$import_file" -o="$CURRENT_OSM_DATA"
+        # Original .pdf data is no longer necessary
+        rm $output
+    elif test "$import_file" != $(basename "$CURRENT_OSM_DATA"); then
+        _log "Copying $import_file to $CURRENT_OSM_DATA"
+        cp "$import_file" "$CURRENT_OSM_DATA"
+    fi
 
     _run_osm2pgsql $CURRENT_OSM_DATA "true"
 }
 
 update() {
+    # TODO: allow import file for update
+    local update_file=$1
     local url="$BASE_URL/${OSM_MAP}-updates/"
     local chanset_file="$OSM_DATA/chanset_file.o5c"
+
+    if test -n "$update_file"; then
+        _die "Update is not yet allowed with a given file"
+    fi
 
     _log "Downloading osm update and generating chanset file"
     osmupdate -v --base-url=$url "$CURRENT_OSM_DATA" "$chanset_file"
@@ -147,6 +166,7 @@ help () {
     echo -e "-H\t Database host"
     echo -e "-U\t Database username. Defaults to the user running the script"
     echo -e "-w\t Database password"
+    echo -e "-f\t Import file. If you already have the map file, pass it on." 
     echo -e "-d\t Database name. Defaults to gis"
     echo -e "-p\t Database port. Defaults to 5432"
     echo -e "-o\t Directory used to store downloaded osm data, defaults to the script dir"
@@ -161,24 +181,29 @@ help () {
 #
 BASE_URL="http://download.geofabrik.de"
 DB_PORT=5432
+DB_HOST=""
 DB_USER=$USER
 DB_NAME="gis"
 OSM_MAP="south-america/brazil"
 OSM_DATA="$(dirname $(realpath "$0"))"
 OSM_IMPORT_CACHE=2048
 ACTION="import"
+IMPORT_FILE=""
 
 ##
 # PARSER COMMAND LINE ARGUMENTS
 #
 
-while getopts ":c:o:p:U:d:w:m:hH:a:" opt; do
+while getopts ":c:o:p:U:d:w:m:hH:a:f:" opt; do
     case "$opt" in
         a)
             ACTION=$OPTARG
             ;;
         p)
             DB_PORT=$OPTARG
+            ;;
+        f)
+            IMPORT_FILE=$OPTARG
             ;;
         U)
             DB_USER=$OPTARG
@@ -242,13 +267,17 @@ if ! echo "$DB_PORT" | grep -qP '^[0-9]+$'; then
     _die "Unexpected database port: expected an integer but found: $DB_PORT"
 fi
 
+if test -n "$IMPORT_FILE" -a ! -f "$IMPORT_FILE"; then
+    _die "File $IMPORT_FILE was not found"
+fi
+    
 ##
 # Just.. DO IT!!
 #
 if test "$ACTION" = "import"; then
-    import
+    import $IMPORT_FILE
 elif test "$ACTION" = "update"; then
-    update
+    update $IMPORT_FILE
 else
     echo "Unrecognized action $ACTION"
     help
