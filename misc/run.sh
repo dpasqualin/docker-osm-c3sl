@@ -84,7 +84,7 @@ _run_osm2pgsql () {
     osm2pgsql $mode -C $OSM_IMPORT_CACHE \
               --number-processes $number_processes --hstore \
               $opts --slim "$import_file"
-} 
+}
 
 # TODO: Needs testing
 createdb () {
@@ -111,13 +111,18 @@ import () {
     local url="$BASE_URL/${OSM_MAP}-latest.osm.pbf"
     local output="$OSM_DATA/osm_data.pbf"
 
-    if test -z $import_file; then
-        _log "Downloading osm data file from $url"
+    if test -z "$import_file"; then
+        _log "Downloading osm data file from $url and saving to $output"
+        if test -f "$output"; then
+            _log "Removing existing output $output"
+            rm -f "$output"
+        fi
         if which axel &>/dev/null; then
             axel -n5 -o "$output" "$url"
         else
-            wget -O "$output" "$url" 
+            wget -O "$output" "$url"
         fi
+        import_file=$output
     fi
 
     if grep -q '\.pbf$' <<< "$import_file"; then
@@ -270,7 +275,7 @@ fi
 if test -n "$IMPORT_FILE" -a ! -f "$IMPORT_FILE"; then
     _die "File $IMPORT_FILE was not found"
 fi
-    
+
 ##
 # Just.. DO IT!!
 #
