@@ -1,0 +1,13 @@
+version: '2'
+services:
+    osm:
+        restart: always
+        image: marula.c3sl.ufpr.br:5000/c3sl/osm
+        container_name: osm
+        ports:
+            - 8080:80
+        environment:
+            - PG_USER=osm
+            - PG_DB=osm_brazil
+            - PG_HOST=c3sldatabase.c3sl.ufpr.br
+            - PG_PASS=dasdWefW123$das;Efk

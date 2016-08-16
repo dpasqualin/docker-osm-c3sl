@@ -1,4 +1,4 @@
-# docker-osm-c3sl
+# docker-renderd-osm
 
 A basic image for rendering/serving tiles using OpenStreetMap data from an external
 PostgreSQL instance.
@@ -7,26 +7,25 @@ PostgreSQL instance.
 
 Build using
 
-    # docker build -t dpasqualin/docker-osm-c3sl github.com/dpasqualin/docker-osm-c3sl
-
-## Creating a database
-
-There is a file called run.sh inside misc directory that is not part of the
-docker container. This file can help you create and set up a database with
-osm data in it, as well as helping you to keep this database updated.
-
-It doesn't cover all scenarios, but it can be helpful.
+    # docker build -t mguentner/renderd-osm github.com/mguentner/docker-renderd-osm.git
 
 ## Running
 
-This document assumes that OpenStreetMap data has already been imported in an external database.
+This container is designed to work together with
+[openfirmware/docker-postgres-osm](https://registry.hub.docker.com/u/openfirmware/postgres-osm/).
+This document assumes that OpenStreetMap data has already been imported.
+If not build/pull [openfirmware/docker-osm2pgsql](https://registry.hub.docker.com/u/openfirmware/osm2pgsql/) and follow the instructions.
 
-    # docker run -i -t --name osm -p 8080:80 -e PG_DB=<dbname> -e PG_HOST=<dbhost> -e PG_PASS=<dbpassword> -e PG_USER=<dbuser> dpasqualin/docker-osm-c3sl
+First, start the already configured PostgreSQL container:
 
-Once the container is up you should be able to see a map of the
-world once you point your browser to [http://127.0.0.1:8080](http://127.0.0.1:8080)
+    # docker start postgres-osm
 
-Notice in the top right corner a menu where you can select between available styles.
+Now, start the renderd container and link them together:
+
+    # docker run -i -t -p 8080:80 --link postgres-osm:pg  mguentner/renderd-osm:latest
+
+Once the container is up you should be able to see a small map of the
+world once you point your browser to [http://127.0.0.1:8080/osm/0/0/0.png](http://127.0.0.1:8080/osm/0/0/0.png)
 
 ## Available Styles
 
@@ -35,12 +34,6 @@ Notice in the top right corner a menu where you can select between available sty
  * [osm-bright](https://github.com/mapbox/osm-bright)
    available at [http://host/osmb/0/0/0.png](http://host/osmb/0/0/0.png)
 
-## Use our instance
-
-There is (or should be) a running instance of this container at
-[http://openstreetmap.c3sl.ufpr.br]. Currently only Brazil is available, but
-feel free to use it on your application.
-
 ## About
 
-This Dockerfile is based on [mguentner/docker-renderd-osm](https://github.com/mguentner/docker-renderd-osm).
+This Dockerfile has been put together using the [Debian Tileserver Install Guide](https://wiki.debian.org/OSM/tileserver/jessie)
