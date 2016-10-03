@@ -1,8 +1,21 @@
+stages:
+    - build
+    - deploy
+
 build:
     stage: build
     script:
         - docker build -t marula.c3sl.ufpr.br:5000/c3sl/osm .
+    tags:
+        - docker
+        - build
+
+deploy:
+    stage: deploy
+    script:
         - docker push marula.c3sl.ufpr.br:5000/c3sl/osm
     tags:
         - docker
         - build
+    only:
+        - master
